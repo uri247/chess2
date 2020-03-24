@@ -1,0 +1,6 @@
+setuptools
+pygments
+pypiwin32; sys_platform=='win32'
+kivy-deps.glew
+kivy-deps.sdl2
+Kivy

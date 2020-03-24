@@ -2,14 +2,16 @@ import itertools
 from itertools import count
 
 from kivy.uix.image import Image
+from kivy.graphics.texture import Texture
 
 import env
 
-class Piece:
+
+class Piece(object):
     freeze_time = 0 if env.dev_mode else 80
     last_move_time = None
-
     last_pos = None
+    _images: typing.List[Texture]
 
     def __init__(self, player, pos, game):
         self.player = player
@@ -19,7 +21,7 @@ class Piece:
         game.board[pos] = self
 
     def image(self, chess_sets_perm):
-        'Get image for piece'
+        """Get image for piece"""
         return self._images[chess_sets_perm[self.player]]
 
     def side(self):
@@ -31,7 +33,7 @@ class Piece:
         self.on_die()
 
     def on_die(self):
-        'Callback for actions on piece dying (overridden for King)'
+        """Callback for actions on piece dying (overridden for King)"""
         pass
 
     def move(self, pos):
@@ -57,7 +59,7 @@ class Piece:
         yield from self.base_moves()
 
     def sight(self):
-        'What squares can this piece see (overridden for Pawn)'
+        """What squares can this piece see (overridden for Pawn)"""
         yield from self.base_moves()
 
     def base_moves(self):
@@ -72,8 +74,14 @@ class Piece:
                 if dst in self.game.board:
                     break
 
+    @staticmethod
+    def _moves(x, y):
+        raise NotImplementedError()
+
+
 class Rook(Piece):
     sight_color = (0.5, 0.5, 1)
+
     @staticmethod
     def _moves(x, y):
         yield ((x+d, y) for d in count(1))
@@ -81,8 +89,10 @@ class Rook(Piece):
         yield ((x, y+d) for d in count(1))
         yield ((x, y-d) for d in count(1))
 
+
 class Bishop(Piece):
     sight_color = (0, 0, 1)
+
     @staticmethod
     def _moves(x, y):
         yield ((x+d, y+d) for d in count(1))
@@ -90,14 +100,18 @@ class Bishop(Piece):
         yield ((x+d, y-d) for d in count(1))
         yield ((x-d, y+d) for d in count(1))
 
+
 class Queen(Rook, Bishop):
     sight_color = (1, 0, 0)
+
     @staticmethod
     def _moves(x, y):
         return itertools.chain(Rook._moves(x, y), Bishop._moves(x, y))
 
+
 class Knight(Piece):
     sight_color = (0, 1, 0)
+
     @staticmethod
     def _moves(x, y):
         for a in [-1, 1]:
@@ -105,10 +119,12 @@ class Knight(Piece):
                 yield [(x+a, y+b)]
                 yield [(x+b, y+a)]
 
+
 class King(Piece):
     sight_color = (0, 1, 1)
     freeze_time = 60
 
+    # noinspection PyProtectedMember
     def sight(self):
         yield from self.base_moves()
         for streak in itertools.chain(Knight._moves(*self.pos), Queen._moves(*self.pos)):
@@ -127,15 +143,15 @@ class King(Piece):
             return super(King, self).move(pos)
         # Castling
         assert y == sy
-        dir = 1 if x > sx else -1
-        piece = self.castling(sx, sy, dir)
+        direction = 1 if x > sx else -1
+        piece = self.castling(sx, sy, direction)
         if piece is None:
             return
         del self.game.board[self.pos]
         self.pos = pos
         self.game.board[pos] = self
         del self.game.board[piece.pos]
-        piece.pos = (sx + dir, sy)
+        piece.pos = (sx + direction, sy)
         self.game.board[piece.pos] = piece
 
     def _moves(self, x, y):
@@ -145,23 +161,25 @@ class King(Piece):
                     yield [(a, b)]
         if self.last_move_time is not None:
             return
-        for dir in [-1, 1]:
-            if self.castling(x, y, dir):
-                yield [(x+dir*2, y)]
+        for direction in [-1, 1]:
+            if self.castling(x, y, direction):
+                yield [(x+direction*2, y)]
 
-    def castling(self, x, y, dir):
-        dest = x+dir
+    def castling(self, x, y, direction):
+        dest = x + direction
         while self.game.in_bounds((dest, y)):
             piece = self.game.board.get((dest, y))
             if piece is not None:
                 if abs(dest-x) > 2 and type(piece) == Rook and piece.last_move_time is None:
                     return piece
                 break
-            dest += dir
+            dest += direction
+
 
 class Pawn(Piece):
     sight_color = (0.5, 0.5, 0.5)
     egg_time = 0 if env.dev_mode else 60
+
     def move(self, pos):
         if not super(Pawn, self).move(pos):
             return False
@@ -170,6 +188,7 @@ class Pawn(Piece):
             new_piece = Queen(self.player, pos, self.game)
             new_piece.freeze_until = self.game.counter+self.egg_time
         return True
+
     def sight(self):
         yield from self.base_moves()
         delta = -1 if self.side() else 1
@@ -178,6 +197,7 @@ class Pawn(Piece):
             dst = a, y+delta
             if self.game.in_bounds(dst):
                 yield dst
+
     def _moves(self, x, y):
         start_row, delta = (6, -1) if self.side() else (1, 1)
         m = [(x, y+delta)]
@@ -192,14 +212,19 @@ class Pawn(Piece):
             if (a, y+delta) in self.game.board:
                 yield [(a, y+delta)]
 
+
 first_row = [Rook, Knight, Bishop, Queen, King, Bishop, Knight, Rook]
 
-S = 45
 
-pieces_image = Image(source='chess.png').texture
+def init_pieces_images():
+    s = 45
+    pieces_image = Image(source='chess.png').texture
 
-for x, piece in enumerate([King, Queen, Rook, Bishop, Knight, Pawn]):
-    piece._images = [pieces_image.get_region(S*x, S*y, S, S) for y in range(6)][::-1]
+    for x, piece in enumerate([King, Queen, Rook, Bishop, Knight, Pawn]):
+        piece._images = [pieces_image.get_region(s*x, s*y, s, s) for y in range(6)][::-1]
 
-for preference, piece in enumerate([King, Pawn, Knight, Bishop, Rook, Queen]):
-    piece.move_preference = preference
+    for preference, piece in enumerate([King, Pawn, Knight, Bishop, Rook, Queen]):
+        piece.move_preference = preference
+
+
+init_pieces_images()

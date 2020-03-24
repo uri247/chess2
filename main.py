@@ -17,6 +17,7 @@ from widgets import WrappedLabel, WrappedButton
 num_msg_lines = 3 if env.is_mobile else 8
 
 class Game(BoxLayout):
+    tutorial_messages: typing.List[str]
     game_title = 'Chess 2: No turns, no sight!'
 
     def __init__(self, **kwargs):
@@ -66,7 +67,7 @@ class Game(BoxLayout):
             **row_args)
         self.text_input.bind(on_text_validate=self.handle_text_input)
         if not env.is_mobile:
-            def steal_focus(*args):
+            def steal_focus(*_args):
                 if not self.text_input.focus:
                     self.text_input.focus = True
             self.text_input.bind(focus=steal_focus)
@@ -83,10 +84,6 @@ class Game(BoxLayout):
             return
         self.net_engine.should_stop = True
 
-    def restart_net_engine(self):
-        self.stop_net_engine()
-        self.net_engine = NetEngine(self.game_model)
-
     def start_game(self, _):
         self.game_model.mode = 'connect'
         self.score = [0, 0]
@@ -96,7 +93,7 @@ class Game(BoxLayout):
         self.game_model.init()
         self.net_engine.start()
 
-    def start_tutorial(self, i):
+    def start_tutorial(self, _i):
         self.game_model.mode = 'tutorial'
         self.restart_net_engine()
         self.game_model.messages.clear()

@@ -8,6 +8,7 @@ from kivy.uix.widget import Widget
 
 import env
 
+
 class BoardView(Widget):
     def __init__(self, game, **kwargs):
         super(BoardView, self).__init__(**kwargs)
@@ -184,7 +185,7 @@ class BoardView(Widget):
             if piece.player == self.game.player and self.mouse_pos in piece.moves():
                 self.potential_pieces.append(piece)
         self.potential_pieces.sort(key = lambda x: x.move_preference)
-        if [] == self.potential_pieces:
+        if len(self.potential_pieces) == 0:
             self.selected = None
         else:
             self.dst_pos = self.mouse_pos
