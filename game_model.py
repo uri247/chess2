@@ -1,7 +1,14 @@
 import chess
 import env
 
-class GameModel:
+
+class GameModel(object):
+    counter: int
+    cur_actions: list
+    player_freeze: dict
+    num_players: int
+    king_captured: typing.Callable[[int], None]
+
     player_freeze_time = 0 if env.dev_mode else 20
 
     def __init__(self):
@@ -29,10 +36,10 @@ class GameModel:
         return self.mode in ['tutorial', 'play']
 
     def init(self, num_boards=None):
-        '''
+        """
         Initialize game.
         Can initialize with more game boards for more players!
-        '''
+        """
 
         if num_boards is not None:
             self.num_boards = num_boards
@@ -44,7 +51,7 @@ class GameModel:
             for dx, piece in enumerate(chess.first_row):
                 p = piece(who, (x+dx, y0), self)
                 if piece == chess.King:
-                    p.on_die = lambda who=who: self.king_captured(who)
+                    p.on_die = lambda who_=who: self.king_captured(who_)
                 chess.Pawn(who, (x+dx, y1), self)
         for x in self.on_init:
             x()
@@ -56,7 +63,7 @@ class GameModel:
         return True
 
     def add_action(self, act_type, *params):
-        'Queue an action to be executed'
+        """Queue an action to be executed"""
         self.cur_actions.append((act_type, params))
 
     def action_msg(self, nick, *txt):
