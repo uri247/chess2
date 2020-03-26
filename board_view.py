@@ -1,15 +1,23 @@
 import itertools
 import operator
 import random
+import typing
 
 from kivy.core.window import Window
 from kivy.graphics import Color, Rectangle
 from kivy.uix.widget import Widget
 
 import env
+from chess import Piece
 
 
 class BoardView(Widget):
+    potential_pieces: typing.List[Piece]
+    chess_sets_perm: typing.List[int]
+    is_dragging: bool
+    selected: typing.Optional[Piece]
+    dst_pos: typing.Optional[typing.Tuple[int, int]]
+
     def __init__(self, game, **kwargs):
         super(BoardView, self).__init__(**kwargs)
         self.game = game
@@ -27,12 +35,12 @@ class BoardView(Widget):
         self.shuffle_sets()
 
     def shuffle_sets(self):
-        'Randomly change which chess piece images sets are used'
+        """Randomly change which chess piece images sets are used"""
         a = [0, 2, 4]
         b = [1, 3, 5]
         random.shuffle(a)
         random.shuffle(b)
-        self.chess_sets_perm = [[a, b][i%2][i//2] for i in range(6)]
+        self.chess_sets_perm = [[a, b][i % 2][i//2] for i in range(6)]
 
     def show_board(self):
         cols, see = self.board_info()
@@ -64,7 +72,8 @@ class BoardView(Widget):
                             new_screen_pos = self.screen_pos(pos)
                             Rectangle(
                                 texture=piece.image(self.chess_sets_perm),
-                                pos=[int(last_screen_pos[i]+(new_screen_pos[i]-last_screen_pos[i])*pos_between) for i in range(2)],
+                                pos=[int(last_screen_pos[i]+(new_screen_pos[i]-last_screen_pos[i])*pos_between)
+                                     for i in range(2)],
                                 size=sq)
                 if piece is self.selected and self.game.active():
                     transparent = True
@@ -101,7 +110,7 @@ class BoardView(Widget):
         movesee = {}
         see = set()
         for piece in self.game.board.values():
-            if player is not None and piece.side() != player%2:
+            if player is not None and piece.side() != player % 2:
                 continue
             see.add(piece.pos)
             if piece.player == player:
@@ -110,9 +119,11 @@ class BoardView(Widget):
                     flash[piece.pos] = piece.sight_color
                 else:
                     movesee[piece.pos] = piece.sight_color
+            else:
+                moves = set()
             for dst in itertools.chain(piece.sight()):
                 see.add(dst)
-                if piece.player == player and dst in moves:
+                if dst in moves:
                     movesee[dst] = list(map(operator.add, movesee.get(dst, [0]*3), piece.sight_color))
 
         cols = {}
@@ -130,11 +141,11 @@ class BoardView(Widget):
             return
         self.calc_mouse_pos(event.pos)
         if event.is_mouse_scrolling:
-            if [] == self.potential_pieces:
+            if len(self.potential_pieces) == 0:
                 return
             d = 1 if event.button == 'scrolldown' else -1
             self.selected = self.potential_pieces[
-                (self.potential_pieces.index(self.selected)+d)%len(self.potential_pieces)]
+                (self.potential_pieces.index(self.selected)+d) % len(self.potential_pieces)]
             return
         if self.mouse_pos in self.game.board and self.game.board[self.mouse_pos].player == self.game.player:
             self.is_dragging = True
@@ -171,6 +182,7 @@ class BoardView(Widget):
         return tuple(sx+self.square_size*x for x, sx in zip(pos, self.pos))
 
     last_pos = None
+
     def update_dst(self):
         if self.selected is not None and self.game.board.get(self.selected.pos) is not self.selected:
             self.selected = None
@@ -180,11 +192,10 @@ class BoardView(Widget):
                 self.dst_pos = self.mouse_pos
             return
         self.is_dragging = False
-        self.potential_pieces = []
-        for piece in self.game.board.values():
-            if piece.player == self.game.player and self.mouse_pos in piece.moves():
-                self.potential_pieces.append(piece)
-        self.potential_pieces.sort(key = lambda x: x.move_preference)
+
+        self.potential_pieces = [piece for piece in self.game.board.values()
+                                 if piece.player == self.game.player and self.mouse_pos in piece.moves()]
+        self.potential_pieces.sort(key=lambda x: x.move_preference)
         if len(self.potential_pieces) == 0:
             self.selected = None
         else:

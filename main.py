@@ -1,7 +1,8 @@
-'''
+"""
 A networked real-time strategy game based on Chess
-'''
+"""
 
+import typing
 from kivy.app import App
 from kivy.clock import Clock
 from kivy.core.window import Window
@@ -15,6 +16,7 @@ from net_engine import NetEngine
 from widgets import WrappedLabel, WrappedButton
 
 num_msg_lines = 3 if env.is_mobile else 8
+
 
 class Game(BoxLayout):
     tutorial_messages: typing.List[str]
@@ -168,13 +170,16 @@ class Game(BoxLayout):
         self.board_view.update_dst()
         self.board_view.show_board()
 
+
 class Chess2App(App):
     def build(self):
         self.game = Game()
         self.game.text_input.focus = True
         return self.game
+
     def stop(self):
         self.game.stop_net_engine()
+
 
 if __name__ == '__main__':
     Window.softinput_mode = 'pan'

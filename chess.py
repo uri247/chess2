@@ -1,5 +1,6 @@
 import itertools
 from itertools import count
+import typing
 
 from kivy.uix.image import Image
 from kivy.graphics.texture import Texture

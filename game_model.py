@@ -1,3 +1,4 @@
+import typing
 import chess
 import env
 
@@ -8,6 +9,8 @@ class GameModel(object):
     player_freeze: dict
     num_players: int
     king_captured: typing.Callable[[int], None]
+    board: typing.Dict[typing.Tuple[int, int], chess.Piece]
+    init: typing.List[typing.Callable]
 
     player_freeze_time = 0 if env.dev_mode else 20
 
@@ -45,8 +48,12 @@ class GameModel(object):
             self.num_boards = num_boards
         self.player_freeze = {}
         self.board = {}
-        self.board_size = [8*self.num_boards, 8]
+        self.board_size = (8*self.num_boards, 8)
         self.num_players = self.num_boards * 2
+
+        # Create all the pieces in an over sophisticated way. Basically, for two players, the loop will
+        # iterate twice (once for white, once for black). For the white, y0 (The officer row) will be 0, and
+        # for the black, the y0 will be 7
         for who, (x, y0, y1) in enumerate([(0, 0, 1), (0, 7, 6), (8, 0, 1), (8, 7, 6)][:self.num_players]):
             for dx, piece in enumerate(chess.first_row):
                 p = piece(who, (x+dx, y0), self)
@@ -57,10 +64,8 @@ class GameModel(object):
             x()
 
     def in_bounds(self, pos):
-        for x, s in zip(pos, self.board_size):
-            if not (0 <= x < s):
-                return False
-        return True
+        # position needs to be within board size in both dimensions
+        return all(0 <= x < s for x, s in zip(pos, self.board_size))
 
     def add_action(self, act_type, *params):
         """Queue an action to be executed"""
