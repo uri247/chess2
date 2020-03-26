@@ -84,6 +84,10 @@ class Game(BoxLayout):
             return
         self.net_engine.should_stop = True
 
+    def restart_net_engine(self):
+        self.stop_net_engine()
+        self.net_engine = NetEngine(self.game_model)
+
     def start_game(self, _):
         self.game_model.mode = 'connect'
         self.score = [0, 0]
